@@ -1,6 +1,6 @@
 // The simplest possible sbt build file is just one line:
 
-scalaVersion := "2.13.3"
+scalaVersion := "2.13.5"
 // That is, to create a valid sbt build, all you've got to do is define the
 // version of Scala you'd like your project to use.
 
@@ -16,10 +16,15 @@ name := "Agents in scala"
 organization := "Hennns"
 version := "1.0"
 
+val AkkaVersion = "2.6.13"
+
+libraryDependencies ++= Seq(
+  "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion
+)
+
 // Note, it's not required for you to define these three settings. These are
 // mostly only necessary if you intend to publish your library's binaries on a
 // place like Sonatype or Bintray.
-
 
 // Want to use a published library in your project?
 // You can define other libraries as dependencies in your build like this:
