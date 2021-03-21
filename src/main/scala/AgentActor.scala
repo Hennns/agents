@@ -1,19 +1,26 @@
-import AgentActor.Commands
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 
-class AgentActor(context: ActorContext[Commands])
-    extends AbstractBehavior[Commands](context) {
+import scala.util.{Failure, Success, Try}
+
+class AgentActor(
+    context: ActorContext[AgentActor.Commands],
+    val prefApples: Float,
+    val prefOranges: Float
+) extends AbstractBehavior[AgentActor.Commands](context) {
   import AgentActor._
 
-  var myApples: Int  = 0
-  var myOranges: Int = 0
+  var myApples: Int  = 100
+  var myOranges: Int = 100
 
   override def onMessage(msg: Commands): Behavior[Commands] =
     msg match {
       case TradeApple(apples, oranges, replyTo) =>
+        println(
+          s"Mrs Apples is ${AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges)}"
+        )
         // Check if trade is acceptable
         val tradePossible = true
         if (tradePossible) {
@@ -25,6 +32,9 @@ class AgentActor(context: ActorContext[Commands])
 
       case TradeAccepted =>
         println("Trade completed")
+        println(
+          s"Mrs Apples is ${AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges)}"
+        )
         this
 
       case TradeRejected =>
@@ -36,8 +46,28 @@ class AgentActor(context: ActorContext[Commands])
 }
 
 object AgentActor {
-  def apply(): Behavior[Commands] =
-    Behaviors.setup(context => new AgentActor(context))
+  def apply(): Behavior[Commands] = {
+    val prefApples: Float  = scala.util.Random.nextFloat()
+    val prefOranges: Float = 1 - prefApples
+
+    Behaviors.setup(context => new AgentActor(context, prefApples, prefOranges))
+  }
+
+  def mrsApples(
+      prefApples: Float,
+      prefOranges: Float,
+      numApples: Int,
+      numOranges: Int
+  ): Float = {
+    Try {
+      prefApples * numOranges / prefOranges * numApples
+    } match {
+      case Success(value)     => value
+      case Failure(exception) => 0
+
+    }
+
+  }
 
   sealed trait Commands
 
