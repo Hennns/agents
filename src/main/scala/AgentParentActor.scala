@@ -1,12 +1,14 @@
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 
 import scala.collection.mutable
 
-class AgentParentActor(context: ActorContext[AgentParentActor.Commands])
-    extends AbstractBehavior[AgentParentActor.Commands](context) {
+class AgentParentActor(
+    context: ActorContext[AgentParentActor.Commands],
+    mover: ActorSystem[AgentMover.Commands]
+) extends AbstractBehavior[AgentParentActor.Commands](context) {
   import AgentParentActor._
 
   var currentNumAgents: Int = 0
@@ -18,8 +20,9 @@ class AgentParentActor(context: ActorContext[AgentParentActor.Commands])
       case SpawnAgents(num) =>
         println("got start message")
         (currentNumAgents to currentNumAgents + num).foreach { agentNum =>
-          val name = s"agent$agentNum"
-          val ref  = context.spawn(AgentActor(), name)
+          val name: String                       = s"agent$agentNum"
+          val ref: ActorRef[AgentActor.Commands] = context.spawn(AgentActor(), name)
+          mover ! AgentMover.AddAgent(ref)
           actorRefByAgentName += (name -> ref)
         }
 
@@ -36,8 +39,8 @@ class AgentParentActor(context: ActorContext[AgentParentActor.Commands])
 }
 
 object AgentParentActor {
-  def apply(): Behavior[Commands] =
-    Behaviors.setup(context => new AgentParentActor(context))
+  def apply(mover: ActorSystem[AgentMover.Commands]): Behavior[Commands] =
+    Behaviors.setup(context => new AgentParentActor(context, mover))
 
   sealed trait Commands
   final case class SpawnAgents(num: Int) extends Commands

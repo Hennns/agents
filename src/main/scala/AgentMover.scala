@@ -2,6 +2,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
+import akka.pattern.StatusReply
 
 import scala.collection.mutable
 
@@ -11,7 +12,7 @@ class AgentMover(context: ActorContext[AgentMover.Commands])
     extends AbstractBehavior[AgentMover.Commands](context) {
   import AgentMover._
 
-  var actorRefTracker: mutable.Map[ActorRef[AgentActor], Coordinates] =
+  var actorRefTracker: mutable.Map[ActorRef[AgentActor.Commands], Coordinates] =
     mutable.Map.empty
 
   override def onMessage(msg: Commands): Behavior[Commands] =
@@ -21,16 +22,23 @@ class AgentMover(context: ActorContext[AgentMover.Commands])
         actorRefTracker += ((agent, initialLocation))
         this
       case MoveAgent(coordinates, agent) => this
+      case AgentMover.GetAgentPositions(replyTo) =>
+        replyTo ! StatusReply.success(actorRefTracker.toMap)
+        this
     }
 }
 
 object AgentMover {
+
   def apply(): Behavior[Commands] =
     Behaviors.setup(context => new AgentMover(context))
 
   sealed trait Commands
-  final case class AddAgent(agent: ActorRef[AgentActor]) extends Commands
+  final case class AddAgent(agent: ActorRef[AgentActor.Commands]) extends Commands
   final case class MoveAgent(coordinates: Coordinates, agent: ActorRef[AgentActor])
       extends Commands
+  final case class GetAgentPositions(
+      replyTo: ActorRef[StatusReply[Map[ActorRef[AgentActor.Commands], Coordinates]]]
+  ) extends Commands
 
 }
