@@ -16,16 +16,14 @@ object Main extends JFXApp {
 
   println("Starting application")
 
-  val agentMoverSystem: ActorSystem[AgentMover.Commands] = ActorSystem(AgentMover(), "AgentMover")
-  implicit val ec: ExecutionContextExecutor              = agentMoverSystem.executionContext
-
-  implicit val timeout: Timeout = 3.seconds
-  implicit val agentParentSystem: ActorSystem[AgentParentActor.Commands] =
-    ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
+  implicit val agentMoverSystem: ActorSystem[AgentMover.Commands] = ActorSystem(AgentMover(), "AgentMover")
+  implicit val ec: ExecutionContextExecutor                       = agentMoverSystem.executionContext
+  implicit val timeout: Timeout                                   = 3.seconds
 
   var actorLabelMap: mutable.Map[ActorRef[AgentActor.Commands], Label] = mutable.Map.empty
 
-  agentParentSystem ! AgentParentActor.SpawnAgents(2)
+  val agentParentSystem: ActorSystem[AgentParentActor.Commands] =
+    ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
 
   val canvas: Pane = new Pane()
   stage = new PrimaryStage {
@@ -33,6 +31,16 @@ object Main extends JFXApp {
     scene = new Scene(canvas, 800, 600)
   }
   stage.show
+
+  def moveAgents(): Unit = {
+    println(s"Move agents, ${actorLabelMap.headOption}")
+    actorLabelMap.headOption match {
+      case Some((ref, _)) =>
+        println(s"Moving $ref")
+        agentMoverSystem ! AgentMover.MoveAgent(Coordinates(2, 2), ref)
+      case None => ()
+    }
+  }
 
   def updateAgentPositions(): Runnable = { () =>
     agentMoverSystem
@@ -48,18 +56,18 @@ object Main extends JFXApp {
               label.relocate(coordinates.x, coordinates.y)
           }
       }
+    moveAgents()
   }
 
   def addNewLabel(): Label = {
     println("creating new label")
-    val newLabel = new Label("this is a label")
+    val newLabel = new Label("this is a agent")
     // Modifying GUI elements needs to be done on the JavaFX Application Thread
-    Platform.runLater {
-      canvas.getChildren.add(newLabel)
-    }
+    Platform.runLater { canvas.getChildren.add(newLabel) }
     newLabel
   }
 
+  agentParentSystem ! AgentParentActor.SpawnAgents(2)
   agentMoverSystem.scheduler.scheduleAtFixedRate(10.seconds, 1.seconds) { updateAgentPositions() }
 
   override def stopApp(): Unit = {

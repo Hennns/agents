@@ -8,8 +8,7 @@ import scala.collection.mutable
 
 case class Coordinates(x: Int, y: Int)
 
-class AgentMover(context: ActorContext[AgentMover.Commands])
-    extends AbstractBehavior[AgentMover.Commands](context) {
+class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBehavior[AgentMover.Commands](context) {
   import AgentMover._
 
   var actorRefTracker: mutable.Map[ActorRef[AgentActor.Commands], Coordinates] =
@@ -21,7 +20,11 @@ class AgentMover(context: ActorContext[AgentMover.Commands])
         val initialLocation = Coordinates(10, 10)
         actorRefTracker += ((agent, initialLocation))
         this
-      case MoveAgent(coordinates, agent) => this
+      case MoveAgent(coordinates, agent) =>
+        val currentLocation = actorRefTracker.getOrElse(agent, Coordinates(0, 0))
+        val newLocation     = Coordinates(currentLocation.x + coordinates.x, currentLocation.y + coordinates.y)
+        actorRefTracker.update(agent, newLocation)
+        this
       case AgentMover.GetAgentPositions(replyTo) =>
         replyTo ! StatusReply.success(actorRefTracker.toMap)
         this
@@ -34,9 +37,8 @@ object AgentMover {
     Behaviors.setup(context => new AgentMover(context))
 
   sealed trait Commands
-  final case class AddAgent(agent: ActorRef[AgentActor.Commands]) extends Commands
-  final case class MoveAgent(coordinates: Coordinates, agent: ActorRef[AgentActor])
-      extends Commands
+  final case class AddAgent(agent: ActorRef[AgentActor.Commands])                            extends Commands
+  final case class MoveAgent(coordinates: Coordinates, agent: ActorRef[AgentActor.Commands]) extends Commands
   final case class GetAgentPositions(
       replyTo: ActorRef[StatusReply[Map[ActorRef[AgentActor.Commands], Coordinates]]]
   ) extends Commands
