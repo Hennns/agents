@@ -33,7 +33,6 @@ class AgentParentActor(
           case (Some(ref1), Some(ref2)) => ref1 ! AgentActor.TradeApple(0, 0, ref2)
           case _                        => println("could not find ref for both agents")
         }
-
         this
     }
 }
