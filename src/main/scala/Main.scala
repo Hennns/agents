@@ -64,7 +64,7 @@ object Main extends JFXApp {
   }
 
   def addNewCircle(): Circle = {
-    println("creating new label")
+    println("creating new circle")
     val newCircle = Circle(10.0, 10.0, 5.0)
     newCircle.setStroke(Color.Azure)
     newCircle.setStrokeWidth(5)
@@ -77,7 +77,7 @@ object Main extends JFXApp {
   }
 
   agentParentSystem ! AgentParentActor.SpawnAgents(1000)
-  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.2.seconds) { updateAgentPositions() }
+  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.1.seconds) { updateAgentPositions() }
 
   override def stopApp(): Unit = {
     println("terminating system")
