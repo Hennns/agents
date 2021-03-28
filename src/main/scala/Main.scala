@@ -4,8 +4,9 @@ import akka.util.Timeout
 import scalafx.application.{JFXApp, Platform}
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.scene.Scene
-import scalafx.scene.control.Label
-import scalafx.scene.layout.Pane
+import scalafx.scene.layout.{Background, BackgroundFill, Border, Pane}
+import scalafx.scene.paint.Color
+import scalafx.scene.shape.{Circle, StrokeType}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
@@ -20,7 +21,7 @@ object Main extends JFXApp {
   implicit val ec: ExecutionContextExecutor                       = agentMoverSystem.executionContext
   implicit val timeout: Timeout                                   = 3.seconds
 
-  var actorLabelMap: mutable.Map[ActorRef[AgentActor.Commands], Label] = mutable.Map.empty
+  var actorLabelMap: mutable.Map[ActorRef[AgentActor.Commands], Circle] = mutable.Map.empty
 
   val agentParentSystem: ActorSystem[AgentParentActor.Commands] =
     ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
@@ -49,19 +50,24 @@ object Main extends JFXApp {
           println(s"got ${value.size} values")
           value.foreach {
             case (ref, coordinates) =>
-              val label: Label = actorLabelMap.getOrElseUpdate(ref, addNewLabel())
-              label.relocate(coordinates.x, coordinates.y)
+              val circle: Circle = actorLabelMap.getOrElseUpdate(ref, addNewCircle())
+              circle.relocate(coordinates.x, coordinates.y)
           }
       }
     moveAgents()
   }
 
-  def addNewLabel(): Label = {
+  def addNewCircle(): Circle = {
     println("creating new label")
-    val newLabel = new Label("agent")
+    val newCircle = Circle(10.0, 10.0, 5.0)
+    newCircle.setStroke(Color.Azure)
+    newCircle.setStrokeWidth(5)
+    newCircle.setStrokeType(StrokeType.Inside)
+    newCircle.setFill(Color.DeepSkyBlue)
+
     // Modifying GUI elements needs to be done on the JavaFX Application Thread
-    Platform.runLater { canvas.getChildren.add(newLabel) }
-    newLabel
+    Platform.runLater { canvas.getChildren.add(newCircle) }
+    newCircle
   }
 
   agentParentSystem ! AgentParentActor.SpawnAgents(1000)
@@ -71,5 +77,6 @@ object Main extends JFXApp {
     println("terminating system")
     agentParentSystem.terminate()
     agentMoverSystem.terminate()
+    Platform.exit()
   }
 }

@@ -26,8 +26,8 @@ class AgentParentActor(
           actorRefByAgentName += (name -> ref)
         }
 
-        val agent1 = actorRefByAgentName.get("agent1")
-        val agent2 = actorRefByAgentName.get("agent2")
+        val agent1 = actorRefByAgentName.get("agent0")
+        val agent2 = actorRefByAgentName.get("agent1")
 
         (agent1, agent2) match {
           case (Some(ref1), Some(ref2)) => ref1 ! AgentActor.TradeApple(0, 0, ref2)
