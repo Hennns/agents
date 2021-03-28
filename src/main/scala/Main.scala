@@ -4,7 +4,7 @@ import akka.util.Timeout
 import scalafx.application.{JFXApp, Platform}
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.scene.Scene
-import scalafx.scene.layout.{Background, BackgroundFill, Border, Pane}
+import scalafx.scene.layout.{Border, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, Pane}
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.{Circle, StrokeType}
 
@@ -26,7 +26,13 @@ object Main extends JFXApp {
   val agentParentSystem: ActorSystem[AgentParentActor.Commands] =
     ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
 
-  val canvas: Pane = new Pane()
+  val stroke: BorderStroke =
+    new BorderStroke(Color.Black, BorderStrokeStyle.Solid, new CornerRadii(10), BorderWidths.Default)
+  val canvasBorder: Border = new Border(stroke)
+  val canvas: Pane         = new Pane()
+
+  canvas.setBorder(canvasBorder)
+
   stage = new PrimaryStage {
     title = "Agents"
     scene = new Scene(canvas, 800, 600)
