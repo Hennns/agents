@@ -19,10 +19,10 @@ class AgentParentActor(
     msg match {
       case SpawnAgents(num) =>
         println("got start message")
-        (currentNumAgents to currentNumAgents + num).foreach { agentNum =>
+        (currentNumAgents until currentNumAgents + num).foreach { agentNum =>
           val name: String                       = s"agent$agentNum"
           val ref: ActorRef[AgentActor.Commands] = context.spawn(AgentActor(), name)
-          mover ! AgentMover.AddAgent(ref)
+          mover ! AgentMover.MoveAgent(ref)
           actorRefByAgentName += (name -> ref)
         }
 

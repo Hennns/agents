@@ -9,7 +9,7 @@ import scalafx.scene.layout.Pane
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationDouble, DurationInt}
 import scala.util.{Failure, Success}
 
 object Main extends JFXApp {
@@ -33,12 +33,10 @@ object Main extends JFXApp {
   stage.show
 
   def moveAgents(): Unit = {
-    println(s"Move agents, ${actorLabelMap.headOption}")
-    actorLabelMap.headOption match {
-      case Some((ref, _)) =>
-        println(s"Moving $ref")
-        agentMoverSystem ! AgentMover.MoveAgent(Coordinates(2, 2), ref)
-      case None => ()
+    println(s"Moving ${actorLabelMap.size} agents")
+    actorLabelMap.foreach {
+      case (ref, _) =>
+        agentMoverSystem ! AgentMover.MoveAgent(ref)
     }
   }
 
@@ -48,11 +46,10 @@ object Main extends JFXApp {
       .onComplete {
         case Failure(exception) => println(s"error $exception")
         case Success(value) =>
-          println("got value")
+          println(s"got ${value.size} values")
           value.foreach {
             case (ref, coordinates) =>
               val label: Label = actorLabelMap.getOrElseUpdate(ref, addNewLabel())
-              println(s"relocating $label")
               label.relocate(coordinates.x, coordinates.y)
           }
       }
@@ -61,14 +58,14 @@ object Main extends JFXApp {
 
   def addNewLabel(): Label = {
     println("creating new label")
-    val newLabel = new Label("this is a agent")
+    val newLabel = new Label("agent")
     // Modifying GUI elements needs to be done on the JavaFX Application Thread
     Platform.runLater { canvas.getChildren.add(newLabel) }
     newLabel
   }
 
-  agentParentSystem ! AgentParentActor.SpawnAgents(2)
-  agentMoverSystem.scheduler.scheduleAtFixedRate(10.seconds, 1.seconds) { updateAgentPositions() }
+  agentParentSystem ! AgentParentActor.SpawnAgents(1000)
+  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.2.seconds) { updateAgentPositions() }
 
   override def stopApp(): Unit = {
     println("terminating system")
