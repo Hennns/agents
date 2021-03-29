@@ -11,7 +11,6 @@ class AgentParentActor(
 ) extends AbstractBehavior[AgentParentActor.Commands](context) {
   import AgentParentActor._
 
-  var currentNumAgents: Int = 0
   var actorRefByAgentName: mutable.Map[String, ActorRef[AgentActor.Commands]] =
     mutable.Map.empty
 
@@ -19,7 +18,7 @@ class AgentParentActor(
     msg match {
       case SpawnAgents(num) =>
         println("got start message")
-        (currentNumAgents until currentNumAgents + num).foreach { agentNum =>
+        (actorRefByAgentName.size until actorRefByAgentName.size + num).foreach { agentNum =>
           val name: String                       = s"agent$agentNum"
           val ref: ActorRef[AgentActor.Commands] = context.spawn(AgentActor(), name)
           mover ! AgentMover.MoveAgent(ref)

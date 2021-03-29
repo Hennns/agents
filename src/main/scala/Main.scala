@@ -1,10 +1,13 @@
-import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import scalafx.application.{JFXApp, Platform}
+import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
+import scalafx.application.{JFXApp, Platform}
+import scalafx.event.ActionEvent
 import scalafx.scene.Scene
-import scalafx.scene.layout.{Border, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, Pane}
+import scalafx.scene.control.Button
+import scalafx.scene.layout._
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.{Circle, StrokeType}
 
@@ -15,11 +18,12 @@ import scala.util.{Failure, Success}
 
 object Main extends JFXApp {
 
-  println("Starting application")
-
   implicit val agentMoverSystem: ActorSystem[AgentMover.Commands] = ActorSystem(AgentMover(), "AgentMover")
   implicit val ec: ExecutionContextExecutor                       = agentMoverSystem.executionContext
   implicit val timeout: Timeout                                   = 3.seconds
+
+  val sceneWidth: Int  = 800
+  val sceneHeight: Int = 600
 
   var actorLabelMap: mutable.Map[ActorRef[AgentActor.Commands], Circle] = mutable.Map.empty
 
@@ -31,11 +35,21 @@ object Main extends JFXApp {
   val canvasBorder: Border = new Border(stroke)
   val canvas: Pane         = new Pane()
 
+  val button1 = new Button("Spawn Agents") {
+    layoutX = sceneWidth - 100
+    layoutY = 5
+    onAction = (e: ActionEvent) => {
+      println("button clicked")
+      agentParentSystem ! AgentParentActor.SpawnAgents(10)
+    }
+  }
+
   canvas.setBorder(canvasBorder)
+  canvas.getChildren.add(button1)
 
   stage = new PrimaryStage {
     title = "Agents"
-    scene = new Scene(canvas, 800, 600)
+    scene = new Scene(canvas, sceneWidth, sceneHeight)
   }
   stage.show
 
@@ -76,7 +90,6 @@ object Main extends JFXApp {
     newCircle
   }
 
-  agentParentSystem ! AgentParentActor.SpawnAgents(1000)
   agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.1.seconds) { updateAgentPositions() }
 
   override def stopApp(): Unit = {
