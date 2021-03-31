@@ -4,6 +4,7 @@ import akka.util.Timeout
 import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.application.{JFXApp, Platform}
+import scalafx.collections.ObservableMap
 import scalafx.event.ActionEvent
 import scalafx.scene.Scene
 import scalafx.scene.control.Button
@@ -11,7 +12,6 @@ import scalafx.scene.layout._
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.{Circle, StrokeType}
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.{DurationDouble, DurationInt}
 import scala.util.{Failure, Success}
@@ -22,10 +22,12 @@ object Main extends JFXApp {
   implicit val ec: ExecutionContextExecutor                       = agentMoverSystem.executionContext
   implicit val timeout: Timeout                                   = 3.seconds
 
-  val sceneWidth: Int  = 800
-  val sceneHeight: Int = 600
+  val sceneWidth: Int          = 800
+  val sceneHeight: Int         = 600
+  val agentRadius: Double      = 10
+  val agentStrokeWidth: Double = 5
 
-  var actorLabelMap: mutable.Map[ActorRef[AgentActor.Commands], Circle] = mutable.Map.empty
+  val actorLabelMap: ObservableMap[ActorRef[AgentActor.Commands], Circle] = ObservableMap.empty
 
   val agentParentSystem: ActorSystem[AgentParentActor.Commands] =
     ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
@@ -35,7 +37,7 @@ object Main extends JFXApp {
   val canvasBorder: Border = new Border(stroke)
   val canvas: Pane         = new Pane()
 
-  val button1 = new Button("Spawn Agents") {
+  val spawnAgentsButton: Button = new Button("Spawn Agents") {
     layoutX = sceneWidth - 100
     layoutY = 5
     onAction = (e: ActionEvent) => {
@@ -45,8 +47,7 @@ object Main extends JFXApp {
   }
 
   canvas.setBorder(canvasBorder)
-  canvas.getChildren.add(button1)
-
+  canvas.getChildren.add(spawnAgentsButton)
   stage = new PrimaryStage {
     title = "Agents"
     scene = new Scene(canvas, sceneWidth, sceneHeight)
@@ -70,23 +71,34 @@ object Main extends JFXApp {
           println(s"got ${value.size} values")
           value.foreach {
             case (ref, coordinates) =>
-              val circle: Circle = actorLabelMap.getOrElseUpdate(ref, addNewCircle())
-              circle.relocate(coordinates.x, coordinates.y)
+              val circle: Circle = actorLabelMap.getOrElseUpdate(ref, makeNewCircle())
+              Platform.runLater(circle.relocate(coordinates.x, coordinates.y))
           }
       }
     moveAgents()
   }
 
-  def addNewCircle(): Circle = {
+  actorLabelMap.onChange { (_, change) =>
+    change match {
+      case ObservableMap.Add(key, added)              => addCircle(added)
+      case ObservableMap.Remove(key, removed)         => ()
+      case ObservableMap.Replace(key, added, removed) => ()
+      case _                                          => println("Error in change!")
+    }
+  }
+
+  // Modifying GUI elements needs to be done on the JavaFX Application Thread
+  def addCircle(circle: Circle): Unit = {
+    Platform.runLater { canvas.getChildren.add(circle) }
+  }
+
+  def makeNewCircle(): Circle = {
     println("creating new circle")
-    val newCircle = Circle(10.0, 10.0, 5.0)
-    newCircle.setStroke(Color.Azure)
-    newCircle.setStrokeWidth(5)
+    val newCircle = Circle(10.0, 10.0, agentRadius)
+    newCircle.setStroke(Color.Black)
+    newCircle.setStrokeWidth(agentStrokeWidth)
     newCircle.setStrokeType(StrokeType.Inside)
     newCircle.setFill(Color.DeepSkyBlue)
-
-    // Modifying GUI elements needs to be done on the JavaFX Application Thread
-    Platform.runLater { canvas.getChildren.add(newCircle) }
     newCircle
   }
 

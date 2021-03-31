@@ -1,11 +1,11 @@
+import Main.agentRadius
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.actor.typed.scaladsl.AbstractBehavior
-import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.Behaviors
 import akka.pattern.StatusReply
 
-import scala.util.Random
 import scala.collection.mutable
+import scala.math.abs
+import scala.util.Random
 
 case class PositionVector(x: Double, y: Double, xVector: Double, yVector: Double) {
   def move(): PositionVector = {
@@ -15,7 +15,7 @@ case class PositionVector(x: Double, y: Double, xVector: Double, yVector: Double
 object PositionVector {
   def apply(): PositionVector = {
     // TODO add max and min values
-    PositionVector(Random.nextDouble(), Random.nextDouble(), Random.nextDouble(), Random.nextDouble())
+    PositionVector(10, 10, Random.nextDouble(), Random.nextDouble())
   }
 }
 
@@ -32,6 +32,27 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
           case Some(positionVector) => positionVector.move()
           case None                 => PositionVector()
         }
+
+        def checkCollision(): Unit = {
+          actorRefTracker
+            .collectFirst {
+              case (ref, vector)
+                  if (abs(newLocation.x - vector.x) < agentRadius) &&
+                    (abs(newLocation.y - vector.y) < agentRadius) &&
+                    (ref != agent) =>
+                ref
+            }
+            .foreach { ref =>
+              println(s"agent = ${newLocation.x}, ${newLocation.y}")
+              val x = actorRefTracker(ref)
+              println(s"ref = ${x.x}, ${x.y}")
+              println(s"$ref collided with $agent")
+              println("")
+            }
+        }
+
+        checkCollision()
+
         actorRefTracker.update(agent, newLocation)
         this
       case AgentMover.GetAgentPositions(replyTo) =>
