@@ -1,3 +1,5 @@
+package agents
+
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
@@ -21,11 +23,6 @@ object Main extends JFXApp {
   implicit val agentMoverSystem: ActorSystem[AgentMover.Commands] = ActorSystem(AgentMover(), "AgentMover")
   implicit val ec: ExecutionContextExecutor                       = agentMoverSystem.executionContext
   implicit val timeout: Timeout                                   = 3.seconds
-
-  val sceneWidth: Int          = 800
-  val sceneHeight: Int         = 600
-  val agentRadius: Double      = 10
-  val agentStrokeWidth: Double = 5
 
   val actorLabelMap: ObservableMap[ActorRef[AgentActor.Commands], Circle] = ObservableMap.empty
 

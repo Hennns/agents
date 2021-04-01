@@ -1,4 +1,5 @@
-import Main.agentRadius
+package agents
+
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.StatusReply
