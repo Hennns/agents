@@ -43,11 +43,10 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
                 ref
             }
             .foreach { ref =>
-              println(s"agent = ${newLocation.x}, ${newLocation.y}")
+              context.log.debug(s"agent = {}, {}", newLocation.x, newLocation.y)
               val x = actorRefTracker(ref)
-              println(s"ref = ${x.x}, ${x.y}")
-              println(s"$ref collided with $agent")
-              println("")
+              context.log.debug(s"ref = {}, {}", x.x, x.y)
+              context.log.info(s"{} collided with {}", ref, agent)
             }
         }
 

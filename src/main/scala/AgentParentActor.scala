@@ -17,7 +17,7 @@ class AgentParentActor(
   override def onMessage(msg: Commands): Behavior[Commands] =
     msg match {
       case SpawnAgents(num) =>
-        println("got start message")
+        context.log.info("Spawning {} agents", num)
         (actorRefByAgentName.size until actorRefByAgentName.size + num).foreach { agentNum =>
           val name: String                       = s"agent$agentNum"
           val ref: ActorRef[AgentActor.Commands] = context.spawn(AgentActor(), name)
@@ -30,7 +30,7 @@ class AgentParentActor(
 
         (agent1, agent2) match {
           case (Some(ref1), Some(ref2)) => ref1 ! AgentActor.TradeApple(0, 0, ref2)
-          case _                        => println("could not find ref for both agents")
+          case _                        => context.log.error("could not find ref for both agents")
         }
         this
     }

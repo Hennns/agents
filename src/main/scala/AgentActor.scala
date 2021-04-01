@@ -18,7 +18,7 @@ class AgentActor(
   override def onMessage(msg: Commands): Behavior[Commands] =
     msg match {
       case TradeApple(apples, oranges, replyTo) =>
-        println(s"Mrs Apples is ${AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges)}")
+        context.log.info("Mrs Apples is {}", AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges))
         // Check if trade is acceptable
         val tradePossible = true
         if (tradePossible) {
@@ -29,12 +29,12 @@ class AgentActor(
         this
 
       case TradeAccepted =>
-        println("Trade completed")
-        println(s"Mrs Apples is ${AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges)}")
+        context.log.info("Trade completed")
+        context.log.info("Mrs Apples is {}", AgentActor.mrsApples(prefApples, prefOranges, myApples, myOranges))
         this
 
       case TradeRejected =>
-        println("Trade was rejected")
+        context.log.info("Trade was rejected")
         this
     }
 

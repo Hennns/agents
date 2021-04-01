@@ -41,7 +41,7 @@ object Main extends JFXApp {
     layoutX = sceneWidth - 100
     layoutY = 5
     onAction = (e: ActionEvent) => {
-      println("button clicked")
+      agentParentSystem.log.info("button clicked")
       agentParentSystem ! AgentParentActor.SpawnAgents(10)
     }
   }
@@ -55,7 +55,7 @@ object Main extends JFXApp {
   stage.show
 
   def moveAgents(): Unit = {
-    println(s"Moving ${actorLabelMap.size} agents")
+    agentMoverSystem.log.debug("Moving {} agents", actorLabelMap.size)
     actorLabelMap.foreach {
       case (ref, _) =>
         agentMoverSystem ! AgentMover.MoveAgent(ref)
@@ -66,9 +66,9 @@ object Main extends JFXApp {
     agentMoverSystem
       .askWithStatus(AgentMover.GetAgentPositions)
       .onComplete {
-        case Failure(exception) => println(s"error $exception")
+        case Failure(exception) => agentMoverSystem.log.error("Failed to get agent positions {}", exception)
         case Success(value) =>
-          println(s"got ${value.size} values")
+          agentMoverSystem.log.debug("got {} values", value.size)
           value.foreach {
             case (ref, coordinates) =>
               val circle: Circle = actorLabelMap.getOrElseUpdate(ref, makeNewCircle())
@@ -83,7 +83,7 @@ object Main extends JFXApp {
       case ObservableMap.Add(key, added)              => addCircle(added)
       case ObservableMap.Remove(key, removed)         => ()
       case ObservableMap.Replace(key, added, removed) => ()
-      case _                                          => println("Error in change!")
+      case _                                          => agentMoverSystem.log.error("Unexpected change event")
     }
   }
 
@@ -93,7 +93,7 @@ object Main extends JFXApp {
   }
 
   def makeNewCircle(): Circle = {
-    println("creating new circle")
+    agentMoverSystem.log.debug("creating a new circle")
     val newCircle = Circle(10.0, 10.0, agentRadius)
     newCircle.setStroke(Color.Black)
     newCircle.setStrokeWidth(agentStrokeWidth)
@@ -105,8 +105,10 @@ object Main extends JFXApp {
   agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.1.seconds) { updateAgentPositions() }
 
   override def stopApp(): Unit = {
-    println("terminating system")
+    agentParentSystem.log.info("terminating agent parent system")
     agentParentSystem.terminate()
+
+    agentMoverSystem.log.info("terminating agent mover system")
     agentMoverSystem.terminate()
     Platform.exit()
   }
