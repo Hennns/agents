@@ -1,5 +1,6 @@
 package agents
 
+import agents.Main.getAgentBorders
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.StatusReply
@@ -10,7 +11,20 @@ import scala.util.Random
 
 case class PositionVector(x: Double, y: Double, xVector: Double, yVector: Double) {
   def move(): PositionVector = {
-    this.copy(x = x + xVector, y = y + yVector)
+    val (canvasHeight: Double, canvasWidth: Double) = getAgentBorders
+    val newX: Double                                = x + xVector
+    val newY: Double                                = y + yVector
+    val newXVector: Double = newX match {
+      case nextX if nextX > canvasWidth - agentRadius => -math.abs(xVector)
+      case nextX if nextX < 0 + agentRadius           => math.abs(xVector)
+      case _                                          => xVector
+    }
+    val newYVector: Double = newY match {
+      case nextY if nextY > canvasHeight - agentRadius => -math.abs(yVector)
+      case nextY if nextY < 0 + agentRadius            => math.abs(yVector)
+      case _                                           => yVector
+    }
+    this.copy(newX, newY, newXVector, newYVector)
   }
 }
 object PositionVector {
@@ -62,7 +76,6 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
 }
 
 object AgentMover {
-
   def apply(): Behavior[Commands] =
     Behaviors.setup(context => new AgentMover(context))
 

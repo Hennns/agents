@@ -6,6 +6,7 @@ import akka.util.Timeout
 import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.application.{JFXApp, Platform}
+import scalafx.beans.property.ReadOnlyDoubleProperty
 import scalafx.collections.ObservableMap
 import scalafx.event.ActionEvent
 import scalafx.scene.Scene
@@ -30,28 +31,43 @@ object Main extends JFXApp {
     ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
 
   val stroke: BorderStroke =
-    new BorderStroke(Color.Black, BorderStrokeStyle.Solid, new CornerRadii(10), BorderWidths.Default)
+    new BorderStroke(Color.Black, BorderStrokeStyle.Solid, new CornerRadii(agentRadius), BorderWidths.Default)
   val canvasBorder: Border = new Border(stroke)
-  val canvas: Pane         = new Pane()
+  val agentCanvas: Pane    = new Pane()
 
   val spawnAgentsButton: Button = new Button("Spawn Agents") {
     layoutX = sceneWidth - 100
-    layoutY = 5
+    layoutY = 0
+    minHeight = buttonsMinHeight
+    maxHeight = buttonsMaxHeight
+    maxWidth = 100
+    minWidth = 100
     onAction = (e: ActionEvent) => {
       agentParentSystem.log.info("button clicked")
       agentParentSystem ! AgentParentActor.SpawnAgents(10)
     }
   }
+  val buttonCanvas: Pane    = new Pane()
+  val stageCanvas: GridPane = new GridPane()
 
-  canvas.setBorder(canvasBorder)
-  canvas.getChildren.add(spawnAgentsButton)
+  buttonCanvas.getChildren.add(spawnAgentsButton)
+  buttonCanvas.minHeight(buttonsMinHeight)
+  buttonCanvas.maxHeight(buttonsMaxHeight)
+
+  agentCanvas.setBorder(canvasBorder)
+  agentCanvas.prefHeight.bind(stageCanvas.height - buttonCanvas.height)
+  agentCanvas.prefWidth.bind(stageCanvas.width)
+
+  stageCanvas.addRow(0, buttonCanvas)
+  stageCanvas.addRow(1, agentCanvas)
+
   stage = new PrimaryStage {
     title = "Agents"
-    scene = new Scene(canvas, sceneWidth, sceneHeight)
+    scene = new Scene(stageCanvas, sceneWidth, sceneHeight)
   }
   stage.show
 
-  def moveAgents(): Unit = {
+  private def moveAgents(): Unit = {
     agentMoverSystem.log.debug("Moving {} agents", actorLabelMap.size)
     actorLabelMap.foreach {
       case (ref, _) =>
@@ -59,7 +75,7 @@ object Main extends JFXApp {
     }
   }
 
-  def updateAgentPositions(): Runnable = { () =>
+  private def updateAgentPositions(): Runnable = { () =>
     agentMoverSystem
       .askWithStatus(AgentMover.GetAgentPositions)
       .onComplete {
@@ -85,13 +101,11 @@ object Main extends JFXApp {
   }
 
   // Modifying GUI elements needs to be done on the JavaFX Application Thread
-  def addCircle(circle: Circle): Unit = {
-    Platform.runLater { canvas.getChildren.add(circle) }
-  }
+  private def addCircle(circle: Circle): Unit = Platform.runLater { agentCanvas.getChildren.add(circle) }
 
-  def makeNewCircle(): Circle = {
+  private def makeNewCircle(): Circle = {
     agentMoverSystem.log.debug("creating a new circle")
-    val newCircle = Circle(10.0, 10.0, agentRadius)
+    val newCircle = Circle(agentCircleRadius)
     newCircle.setStroke(Color.Black)
     newCircle.setStrokeWidth(agentStrokeWidth)
     newCircle.setStrokeType(StrokeType.Inside)
@@ -99,7 +113,9 @@ object Main extends JFXApp {
     newCircle
   }
 
-  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.1.seconds) { updateAgentPositions() }
+  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.05.seconds) { updateAgentPositions() }
+
+  def getAgentBorders: (Double, Double) = (agentCanvas.height.value, agentCanvas.width.value)
 
   override def stopApp(): Unit = {
     agentParentSystem.log.info("terminating agent parent system")
