@@ -3,10 +3,12 @@ package agents
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
+import javafx.beans.binding.IntegerBinding
 import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.application.{JFXApp, Platform}
-import scalafx.beans.property.ReadOnlyDoubleProperty
+import scalafx.beans.binding.Bindings
+import scalafx.beans.value.ObservableValue.sfxObservableValue2jfxNumberValue
 import scalafx.collections.ObservableMap
 import scalafx.event.ActionEvent
 import scalafx.scene.Scene
@@ -116,6 +118,20 @@ object Main extends JFXApp {
   agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.05.seconds) { updateAgentPositions() }
 
   def getAgentBorders: (Double, Double) = (agentCanvas.height.value, agentCanvas.width.value)
+
+  val rows: IntegerBinding = Bindings.createIntegerBinding(
+    () => ((agentCanvas.height.value / agentRadius) / 2).toInt,
+    agentCanvas.height
+  )
+
+  val columns: IntegerBinding = Bindings.createIntegerBinding(
+    () => ((agentCanvas.width.value / agentRadius) / 2).toInt,
+    agentCanvas.width
+  )
+
+//  columns.addListener { (o: javafx.beans.value.ObservableValue[_ <: Number], oldVal: Number, newVal: Number) =>
+//    agentMoverSystem.log.debug("columns has changed")
+//  }
 
   override def stopApp(): Unit = {
     agentParentSystem.log.info("terminating agent parent system")
