@@ -4,12 +4,13 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import javafx.beans.binding.IntegerBinding
+import javafx.beans.value.ObservableValue
 import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.application.{JFXApp, Platform}
-import scalafx.beans.binding.Bindings
+import scalafx.beans.binding.{Bindings, ObjectBinding}
 import scalafx.beans.value.ObservableValue.sfxObservableValue2jfxNumberValue
-import scalafx.collections.ObservableMap
+import scalafx.collections.{ObservableBuffer, ObservableMap}
 import scalafx.event.ActionEvent
 import scalafx.scene.Scene
 import scalafx.scene.control.Button
@@ -119,18 +120,26 @@ object Main extends JFXApp {
 
   def getAgentBorders: (Double, Double) = (agentCanvas.height.value, agentCanvas.width.value)
 
-  val rows: IntegerBinding = Bindings.createIntegerBinding(
-    () => ((agentCanvas.height.value / agentRadius) / 2).toInt,
+  case class Rectangle(x: Int, y: Int, width: Int, heigth: Int)
+  val rectangleMatrix: ObjectBinding[IndexedSeq[IndexedSeq[Rectangle]]] = Bindings.createObjectBinding(
+    () => {
+      val rows: Range.Exclusive    = Range(0, ((agentCanvas.height.value / agentRadius) / 2).toInt)
+      val columns: Range.Exclusive = Range(0, ((agentCanvas.width.value / agentRadius) / 2).toInt)
+      val height: Int              = (agentCanvas.height.value / rows.length).toInt
+      val width: Int               = (agentCanvas.width.value / columns.length).toInt
+      rows.map(row => columns.map(column => Rectangle(row * width, column * height, width, height)))
+    },
+    agentCanvas.width,
     agentCanvas.height
   )
 
-  val columns: IntegerBinding = Bindings.createIntegerBinding(
-    () => ((agentCanvas.width.value / agentRadius) / 2).toInt,
-    agentCanvas.width
-  )
-
-//  columns.addListener { (o: javafx.beans.value.ObservableValue[_ <: Number], oldVal: Number, newVal: Number) =>
-//    agentMoverSystem.log.debug("columns has changed")
+//  rectangleMatrix.addListener {
+//    (
+//        value: javafx.beans.value.ObservableValue[_ <: IndexedSeq[IndexedSeq[Rectangle]]],
+//        oldVal: IndexedSeq[IndexedSeq[Rectangle]],
+//        newVal: IndexedSeq[IndexedSeq[Rectangle]]
+//    ) =>
+//      agentMoverSystem.log.debug("rectangleMatrix has changed")
 //  }
 
   override def stopApp(): Unit = {
