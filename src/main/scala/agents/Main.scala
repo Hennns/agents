@@ -120,13 +120,15 @@ object Main extends JFXApp {
 
   def getAgentBorders: (Double, Double) = (agentCanvas.height.value, agentCanvas.width.value)
 
+  def getRectangleMatrix: Vector[Vector[Rectangle]] = rectangleMatrix.value
+
   case class Rectangle(x: Int, y: Int, width: Int, heigth: Int)
-  val rectangleMatrix: ObjectBinding[IndexedSeq[IndexedSeq[Rectangle]]] = Bindings.createObjectBinding(
+  private lazy val rectangleMatrix: ObjectBinding[Vector[Vector[Rectangle]]] = Bindings.createObjectBinding(
     () => {
-      val rows: Range.Exclusive    = Range(0, ((agentCanvas.height.value / agentRadius) / 2).toInt)
-      val columns: Range.Exclusive = Range(0, ((agentCanvas.width.value / agentRadius) / 2).toInt)
-      val height: Int              = (agentCanvas.height.value / rows.length).toInt
-      val width: Int               = (agentCanvas.width.value / columns.length).toInt
+      val rows: Vector[Int]    = Vector.range(0, ((agentCanvas.height.value / agentRadius) / 2).toInt)
+      val columns: Vector[Int] = Vector.range(0, ((agentCanvas.width.value / agentRadius) / 2).toInt)
+      val height: Int          = (agentCanvas.height.value / rows.length).toInt
+      val width: Int           = (agentCanvas.width.value / columns.length).toInt
       rows.map(row => columns.map(column => Rectangle(row * width, column * height, width, height)))
     },
     agentCanvas.width,
@@ -135,9 +137,9 @@ object Main extends JFXApp {
 
 //  rectangleMatrix.addListener {
 //    (
-//        value: javafx.beans.value.ObservableValue[_ <: IndexedSeq[IndexedSeq[Rectangle]]],
-//        oldVal: IndexedSeq[IndexedSeq[Rectangle]],
-//        newVal: IndexedSeq[IndexedSeq[Rectangle]]
+//        value: javafx.beans.value.ObservableValue[_ <: Vector[Vector[Rectangle]]],
+//        oldVal: Vector[Vector[Rectangle]],
+//        newVal: Vector[Vector[Rectangle]]
 //    ) =>
 //      agentMoverSystem.log.debug("rectangleMatrix has changed")
 //  }

@@ -1,6 +1,6 @@
 package agents
 
-import agents.Main.getAgentBorders
+import agents.Main.{Rectangle, getAgentBorders, getRectangleMatrix}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.StatusReply
@@ -40,6 +40,15 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
   var actorRefTracker: mutable.Map[ActorRef[AgentActor.Commands], PositionVector] =
     mutable.Map.empty
 
+//  var boxTracker: Array[Array[mutable.Set[ActorRef[AgentActor.Commands]]]] =
+//    Array
+//      .ofDim[mutable.Set[ActorRef[AgentActor.Commands]]](getRectangleMatrix().length, getRectangleMatrix().head.length)
+
+  // TODO the dimensions should be based on getRectangleMatrix().length and getRectangleMatrix().head.length
+  // But it cannot be called during init, since it's not defined yet.
+  var boxTracker: Array[Array[mutable.Set[ActorRef[AgentActor.Commands]]]] =
+    Array.tabulate(30)(_ => Array.tabulate(30)(_ => mutable.Set.empty[ActorRef[AgentActor.Commands]]))
+
   override def onMessage(msg: Commands): Behavior[Commands] =
     msg match {
       case MoveAgent(agent) =>
@@ -47,6 +56,29 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
           case Some(positionVector) => positionVector.move()
           case None                 => PositionVector()
         }
+
+        // TODO this is very ugly and proof of concept
+        // Need to actually remove the agent from the box when it switches
+        // Use the boxes to speed up collision detection algorithm
+        // Remove unsafe .get and .head!
+        val (rowRect, xIndex) = getRectangleMatrix.zipWithIndex.collectFirst {
+          case (rows, index) if (rows.head.x <= newLocation.x) && (newLocation.x <= rows.head.x + rows.head.width) =>
+            (rows, index)
+        }.get
+
+        val yIndex = rowRect.zipWithIndex.collectFirst {
+          case (rect, index) if (rect.y <= newLocation.y) && (newLocation.y <= rect.y + rect.heigth) => index
+        }.get
+
+        boxTracker(xIndex).update(xIndex, boxTracker(xIndex)(yIndex) += agent)
+
+        context.log.debug("Logging elements in the boxTracker")
+        boxTracker.foreach { row =>
+          row.foreach { list =>
+            context.log.info("There is {} elements in this box", list.size)
+          }
+        }
+        context.log.debug("Done Logging elements in the boxTracker")
 
         def checkCollision(): Unit = {
           actorRefTracker
