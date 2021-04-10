@@ -34,13 +34,11 @@ object Main extends JFXApp {
     ActorSystem(AgentParentActor(agentMoverSystem), "AgentParentActor")
 
   val stroke: BorderStroke =
-    new BorderStroke(Color.Black, BorderStrokeStyle.Solid, new CornerRadii(agentRadius), BorderWidths.Default)
+    new BorderStroke(Color.Black, BorderStrokeStyle.Solid, new CornerRadii(agentCircleRadius), BorderWidths.Default)
   val canvasBorder: Border = new Border(stroke)
   val agentCanvas: Pane    = new Pane()
 
   val spawnAgentsButton: Button = new Button("Spawn Agents") {
-    layoutX = sceneWidth - 100
-    layoutY = 0
     minHeight = buttonsMinHeight
     maxHeight = buttonsMaxHeight
     maxWidth = 100
@@ -58,8 +56,8 @@ object Main extends JFXApp {
   buttonCanvas.maxHeight(buttonsMaxHeight)
 
   agentCanvas.setBorder(canvasBorder)
-  agentCanvas.prefHeight.bind(stageCanvas.height - buttonCanvas.height)
-  agentCanvas.prefWidth.bind(stageCanvas.width)
+  agentCanvas.prefHeight.bind(sceneHeight - buttonsMaxHeight)
+  agentCanvas.prefWidth.bind(sceneWidth)
 
   stageCanvas.addRow(0, buttonCanvas)
   stageCanvas.addRow(1, agentCanvas)
@@ -71,7 +69,7 @@ object Main extends JFXApp {
   stage.show
 
   private def moveAgents(): Unit = {
-    agentMoverSystem.log.debug("Moving {} agents", actorLabelMap.size)
+//    agentMoverSystem.log.debug("Moving {} agents", actorLabelMap.size)
     actorLabelMap.foreach {
       case (ref, _) =>
         agentMoverSystem ! AgentMover.MoveAgent(ref)
@@ -83,8 +81,8 @@ object Main extends JFXApp {
       .askWithStatus(AgentMover.GetAgentPositions)
       .onComplete {
         case Failure(exception) => agentMoverSystem.log.error("Failed to get agent positions {}", exception)
-        case Success(value) =>
-          agentMoverSystem.log.debug("got {} values", value.size)
+        case Success(value)     =>
+//          agentMoverSystem.log.debug("got {} values", value.size)
           value.foreach {
             case (ref, coordinates) =>
               val circle: Circle = actorLabelMap.getOrElseUpdate(ref, makeNewCircle())
@@ -116,20 +114,33 @@ object Main extends JFXApp {
     newCircle
   }
 
-  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.05.seconds) { updateAgentPositions() }
+  agentMoverSystem.scheduler.scheduleAtFixedRate(5.seconds, 0.1.seconds) { updateAgentPositions() }
 
   def getAgentBorders: (Double, Double) = (agentCanvas.height.value, agentCanvas.width.value)
 
   def getRectangleMatrix: Vector[Vector[Rectangle]] = rectangleMatrix.value
 
-  case class Rectangle(x: Int, y: Int, width: Int, heigth: Int)
+  case class Rectangle(x: Int, y: Int, width: Int, heigth: Int) {
+    def intersectsPoint(pointX: Double, pointY: Double): Boolean = {
+      x < pointX && (pointX < x + width) && y < pointY && (pointY < y + heigth)
+    }
+  }
+
+  // Rows, the first dimension, increases y values
+  // Columns, the second dimension, increases x values
   private lazy val rectangleMatrix: ObjectBinding[Vector[Vector[Rectangle]]] = Bindings.createObjectBinding(
     () => {
       val rows: Vector[Int]    = Vector.range(0, ((agentCanvas.height.value / agentRadius) / 2).toInt)
       val columns: Vector[Int] = Vector.range(0, ((agentCanvas.width.value / agentRadius) / 2).toInt)
-      val height: Int          = (agentCanvas.height.value / rows.length).toInt
-      val width: Int           = (agentCanvas.width.value / columns.length).toInt
-      rows.map(row => columns.map(column => Rectangle(row * width, column * height, width, height)))
+      val height: Int          = math.ceil(agentCanvas.height.value / rows.length).toInt
+      val width: Int           = math.ceil(agentCanvas.width.value / columns.length).toInt
+
+      val rowsPlusOne    = rows :+ rows.lastOption.getOrElse(0) + 1
+      val columnsPlusOne = columns :+ columns.lastOption.getOrElse(0) + 1
+
+      val res =
+        rowsPlusOne.map(row => columnsPlusOne.map(column => Rectangle(column * width, row * height, width, height)))
+      res
     },
     agentCanvas.width,
     agentCanvas.height

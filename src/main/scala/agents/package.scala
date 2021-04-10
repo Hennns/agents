@@ -5,5 +5,5 @@ package object agents {
   val buttonsMaxHeight: Int  = 30
   val agentCircleRadius: Int = 10
   val agentStrokeWidth: Int  = 5
-  val agentRadius: Int       = agentCircleRadius + agentStrokeWidth
+  val agentRadius: Int       = agentCircleRadius + 2 * agentStrokeWidth
 }
