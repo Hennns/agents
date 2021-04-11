@@ -13,23 +13,20 @@ case class PositionData(x: Double, y: Double, xVector: Double, yVector: Double, 
 
   def move(): PositionData = {
     val (canvasHeight: Double, canvasWidth: Double) = getAgentBorders
-    val newX: Double                                = x + xVector
-    val newY: Double                                = y + yVector
-    val newXVector: Double = newX match {
-      case nextX if nextX > canvasWidth - agentRadius => -math.abs(xVector)
-      case nextX if nextX < 0                         => math.abs(xVector)
-      case _                                          => xVector
+
+    val (newX, newXVector) = x + xVector match {
+      case _newX if _newX > canvasWidth - agentRadius => (x, -math.abs(xVector))
+      case _nextX if _nextX < 0                       => (x, math.abs(xVector))
+      case _nextX                                     => (_nextX, xVector)
     }
-    val newYVector: Double = newY match {
-      case nextY if nextY > canvasHeight - agentRadius => -math.abs(yVector)
-      case nextY if nextY < 0                          => math.abs(yVector)
-      case _                                           => yVector
+
+    val (newY, newYVector) = y + yVector match {
+      case _newY if _newY > canvasHeight - agentRadius => (y, -math.abs(yVector))
+      case _nextY if _nextY < 0                        => (y, math.abs(yVector))
+      case _nextY                                      => (_nextY, yVector)
     }
 
     if (!getRectangleMatrix(row)(column).intersectsPoint(newX, newY)) {
-
-      val t = getRectangleMatrix
-      println(t)
 
       // TODO check surrounding boxes, then use this as fallback
       // TODO cleanup .head etc. !
@@ -62,7 +59,9 @@ object PositionData {
   def apply(): PositionData = {
     // TODO add max and min values
     // TODO place in correct box on apply
-    PositionData(0, 0, Random.nextDouble(), Random.nextDouble(), 0, 0)
+
+    val angle: Double = Random.between(0, 2 * math.Pi)
+    PositionData(200, 200, math.cos(angle) * agentSpeed, math.sin(angle) * agentSpeed, 0, 0)
   }
 }
 
@@ -117,14 +116,20 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
             }
           }
 
+          // TODO Only need to check in the direction that the agent is going.
+
           // Check agents in the same box first
           val sameBoxAgents: Map[ActorRef[AgentActor.Commands], PositionData] =
             boxTracker(newLocation.row)(newLocation.column).toMap
 
           // Then check left/right/above/below
-          lazy val leftBoxAgents  = Map.empty[ActorRef[AgentActor.Commands], PositionData]
+          lazy val leftBoxAgents: Map[ActorRef[AgentActor.Commands], PositionData] =
+            if (newLocation.column - 1 < 0) Map.empty[ActorRef[AgentActor.Commands], PositionData]
+            else boxTracker(newLocation.row)(newLocation.column - 1).toMap
           lazy val rightBoxAgents = Map.empty[ActorRef[AgentActor.Commands], PositionData]
-          lazy val aboveBoxAgents = Map.empty[ActorRef[AgentActor.Commands], PositionData]
+          lazy val aboveBoxAgents =
+            if (newLocation.row - 1 < 0) Map.empty[ActorRef[AgentActor.Commands], PositionData]
+            else boxTracker(newLocation.row - 1)(newLocation.column).toMap
           lazy val belowBoxAgents = Map.empty[ActorRef[AgentActor.Commands], PositionData]
 
           // Then check diagonally
@@ -145,6 +150,7 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
 
           if (temp1.isDefined) temp1
           else if (temp2.isDefined) temp2
+          else if (temp4.isDefined) temp4
           else None
 
         }
@@ -154,12 +160,35 @@ class AgentMover(context: ActorContext[AgentMover.Commands]) extends AbstractBeh
           context.log.info("Trigger trade!")
         }
 
-        checkCollision() match {
-          case Some(ref) => triggerTrade(ref)
-          case None      => ()
+        def bounce(ref: ActorRef[AgentActor.Commands]): Unit = {
+          context.log.info("Bouncing!")
+          val otherAgentPosition: PositionData = actorRefTracker(ref)
+          val distanceX: Double                = newLocation.x - otherAgentPosition.x
+          val distanceY: Double                = newLocation.y - otherAgentPosition.y
+          val norm: Double                     = math.sqrt(math.pow(distanceX, 2) + math.pow(distanceY, 2))
+
+          val directionX: Double = distanceX / norm
+          val directionY: Double = distanceY / norm
+
+          val positionAfterBounce: PositionData =
+            newLocation.copy(xVector = directionX * agentSpeed, yVector = directionY * agentSpeed)
+
+          val otherAgentPositionAfterBounce: PositionData =
+            otherAgentPosition.copy(xVector = -positionAfterBounce.xVector, yVector = -positionAfterBounce.yVector)
+
+          actorRefTracker.update(agent, positionAfterBounce)
+          actorRefTracker.update(ref, otherAgentPositionAfterBounce)
+
         }
 
-        actorRefTracker.update(agent, newLocation)
+        checkCollision() match {
+          case Some(ref) =>
+//            triggerTrade(ref)
+//            bounce(ref)
+            actorRefTracker.update(agent, newLocation)
+          case None => actorRefTracker.update(agent, newLocation)
+        }
+
         this
 
       case AgentMover.GetAgentPositions(replyTo) =>

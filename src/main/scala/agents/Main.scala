@@ -3,14 +3,11 @@ package agents
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import javafx.beans.binding.IntegerBinding
-import javafx.beans.value.ObservableValue
 import scalafx.Includes._
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.application.{JFXApp, Platform}
 import scalafx.beans.binding.{Bindings, ObjectBinding}
-import scalafx.beans.value.ObservableValue.sfxObservableValue2jfxNumberValue
-import scalafx.collections.{ObservableBuffer, ObservableMap}
+import scalafx.collections.ObservableMap
 import scalafx.event.ActionEvent
 import scalafx.scene.Scene
 import scalafx.scene.control.Button

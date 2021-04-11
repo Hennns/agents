@@ -5,7 +5,7 @@ organization := "Hennns"
 version := "1.0"
 
 // Set versions for dependencies
-val akkaVersion    = "2.6.13"
+val akkaVersion    = "2.6.14"
 val logbackVersion = "1.2.3"
 val scalaFxVersion = "15.0.1-R21"
 val javaFxVersion  = "15.0.1"
